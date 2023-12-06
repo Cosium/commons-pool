@@ -16,6 +16,7 @@
  */
 package org.apache.commons.pool2.proxy;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 
@@ -32,6 +33,7 @@ public class JdkProxySource<T> implements ProxySource<T> {
 
     private final ClassLoader classLoader;
     private final Class<?>[] interfaces;
+    private final boolean unwrapInvocationTargetException;
 
 
     /**
@@ -39,12 +41,24 @@ public class JdkProxySource<T> implements ProxySource<T> {
      *
      * @param classLoader The class loader with which to create the proxy
      * @param interfaces  The interfaces to proxy
+     * @param unwrapInvocationTargetException True to make the proxy throw {@link InvocationTargetException#getTargetException()} instead of {@link InvocationTargetException}
      */
-    public JdkProxySource(final ClassLoader classLoader, final Class<?>[] interfaces) {
+    public JdkProxySource(final ClassLoader classLoader, final Class<?>[] interfaces, boolean unwrapInvocationTargetException) {
         this.classLoader = classLoader;
         // Defensive copy
         this.interfaces = new Class<?>[interfaces.length];
         System.arraycopy(interfaces, 0, this.interfaces, 0, interfaces.length);
+        this.unwrapInvocationTargetException = unwrapInvocationTargetException;
+    }
+
+    /**
+     * Constructs a new proxy source for the given interfaces.
+     *
+     * @param classLoader The class loader with which to create the proxy
+     * @param interfaces  The interfaces to proxy
+     */
+    public JdkProxySource(final ClassLoader classLoader, final Class<?>[] interfaces) {
+        this(classLoader, interfaces, false);
     }
 
 
@@ -53,10 +67,9 @@ public class JdkProxySource<T> implements ProxySource<T> {
         @SuppressWarnings("unchecked")
         final
         T proxy = (T) Proxy.newProxyInstance(classLoader, interfaces,
-                new JdkProxyHandler<>(pooledObject, usageTracking));
+                new JdkProxyHandler<>(pooledObject, usageTracking, unwrapInvocationTargetException));
         return proxy;
     }
-
 
     @Override
     public T resolveProxy(final T proxy) {
